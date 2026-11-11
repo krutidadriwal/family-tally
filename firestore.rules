@@ -1,0 +1,238 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_-]+$');
+    }
+
+    // Validation Blueprint: Accounting Group
+    function isValidGroup(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 60 &&
+             data.category in ['Asset', 'Liability', 'Equity', 'Income', 'Expense'] &&
+             (!('parentGroup' in data) || data.parentGroup == null || (data.parentGroup is string && data.parentGroup.size() <= 60)) &&
+             (!('isSystemGroup' in data) || data.isSystemGroup == null || data.isSystemGroup is bool) &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    // Validation Blueprint: Ledger
+    function isValidLedger(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.group is string && data.group.size() > 0 && data.group.size() <= 60 &&
+             data.openingBalance is number &&
+             data.openingBalanceType in ['Dr', 'Cr'] &&
+             (!('subGroup' in data) || data.subGroup == null || (data.subGroup is string && data.subGroup.size() <= 60)) &&
+             (!('marketValue' in data) || data.marketValue == null || data.marketValue is number) &&
+             (!('budgetAmount' in data) || data.budgetAmount == null || data.budgetAmount is number) &&
+             (!('notes' in data) || data.notes == null || (data.notes is string && data.notes.size() <= 500)) &&
+             (!('isSystemLedger' in data) || data.isSystemLedger == null || data.isSystemLedger is bool) &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    // Validation Blueprint: Voucher
+    function isValidVoucher(data) {
+      return data.voucherNumber is string && data.voucherNumber.size() > 0 && data.voucherNumber.size() <= 50 &&
+             data.voucherType in ['F4', 'F5', 'F6', 'F7'] &&
+             data.date is string && data.date.size() >= 8 && data.date.size() <= 20 &&
+             data.totalAmount is number && data.totalAmount >= 0 &&
+             data.narration is string && data.narration.size() <= 500 &&
+             data.entriesJson is string && data.entriesJson.size() <= 50000 &&
+             (!('paymentMode' in data) || data.paymentMode == null || (data.paymentMode is string && data.paymentMode.size() <= 30)) &&
+             (!('upiId' in data) || data.upiId == null || (data.upiId is string && data.upiId.size() <= 100)) &&
+             (!('upiTransactionRef' in data) || data.upiTransactionRef == null || (data.upiTransactionRef is string && data.upiTransactionRef.size() <= 100)) &&
+             (!('familyMember' in data) || data.familyMember == null || (data.familyMember is string && data.familyMember.size() <= 50)) &&
+             (!('attachmentUri' in data) || data.attachmentUri == null || (data.attachmentUri is string && data.attachmentUri.size() <= 2000)) &&
+             (!('isSplit' in data) || data.isSplit == null || data.isSplit is bool) &&
+             (!('splitDetails' in data) || data.splitDetails == null || (data.splitDetails is string && data.splitDetails.size() <= 2000)) &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    // Validation Blueprint: Budget
+    function isValidBudget(data) {
+      return data.ledgerId is string && data.ledgerId.size() > 0 && data.ledgerId.size() <= 128 &&
+             data.ledgerName is string && data.ledgerName.size() > 0 && data.ledgerName.size() <= 100 &&
+             data.monthlyLimit is number && data.monthlyLimit >= 0 &&
+             data.month is string && data.month.size() >= 7 && data.month.size() <= 10 &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    // Validation Blueprint: Recurring Voucher
+    function isValidRecurringVoucher(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+             data.voucherType in ['F4', 'F5', 'F6', 'F7'] &&
+             data.amount is number && data.amount > 0 &&
+             data.debitLedgerId is string && data.debitLedgerId.size() <= 128 &&
+             data.debitLedgerName is string && data.debitLedgerName.size() <= 100 &&
+             data.creditLedgerId is string && data.creditLedgerId.size() <= 128 &&
+             data.creditLedgerName is string && data.creditLedgerName.size() <= 100 &&
+             data.frequency in ['MONTHLY', 'WEEKLY'] &&
+             data.dayOfMonth is number && data.dayOfMonth >= 1 && data.dayOfMonth <= 31 &&
+             data.isActive is bool &&
+             (!('narration' in data) || data.narration == null || (data.narration is string && data.narration.size() <= 500)) &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    // Validation Blueprint: Family Member
+    function isValidFamilyMember(data) {
+      return data.name is string && data.name.size() > 0 && data.name.size() <= 60 &&
+             data.role in ['Admin', 'Member'] &&
+             data.colorHex is string && data.colorHex.size() <= 20 &&
+             (!('email' in data) || data.email == null || (data.email is string && data.email.size() <= 100)) &&
+             (!('updatedAt' in data) || data.updatedAt == null || (data.updatedAt is timestamp && data.updatedAt <= request.time));
+    }
+
+    // --- Subcollections scoped under users/{userId} ---
+    match /users/{userId} {
+      allow get, list: if isOwner(userId);
+      allow create, update, delete: if isOwner(userId);
+
+      // 0. Accounting Groups
+      match /groups/{groupId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(groupId) &&
+                         incoming().keys().hasAll(['name', 'category', 'createdAt']) &&
+                         incoming().keys().hasOnly(['name', 'parentGroup', 'isSystemGroup', 'category', 'createdAt', 'updatedAt']) &&
+                         incoming().createdAt is timestamp &&
+                         incoming().createdAt <= request.time &&
+                         isValidGroup(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(groupId) &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidGroup(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'parentGroup', 'isSystemGroup', 'category', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(groupId);
+      }
+
+      // 1. Ledgers
+      match /ledgers/{ledgerId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(ledgerId) &&
+                         incoming().keys().hasAll(['name', 'group', 'openingBalance', 'openingBalanceType', 'createdAt']) &&
+                         incoming().keys().hasOnly(['name', 'group', 'subGroup', 'openingBalance', 'openingBalanceType', 'marketValue', 'budgetAmount', 'notes', 'isSystemLedger', 'createdAt', 'updatedAt']) &&
+                         incoming().createdAt is timestamp &&
+                         incoming().createdAt <= request.time &&
+                         isValidLedger(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(ledgerId) &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidLedger(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'group', 'subGroup', 'openingBalance', 'openingBalanceType', 'marketValue', 'budgetAmount', 'notes', 'isSystemLedger', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(ledgerId);
+      }
+
+      // 2. Vouchers (Transactions)
+      match /vouchers/{voucherId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(voucherId) &&
+                         incoming().keys().hasAll(['voucherNumber', 'voucherType', 'date', 'totalAmount', 'narration', 'entriesJson', 'createdAt']) &&
+                         incoming().keys().hasOnly(['voucherNumber', 'voucherType', 'date', 'totalAmount', 'narration', 'entriesJson', 'paymentMode', 'upiId', 'upiTransactionRef', 'familyMember', 'attachmentUri', 'isSplit', 'splitDetails', 'createdAt', 'updatedAt']) &&
+                         incoming().createdAt is timestamp &&
+                         incoming().createdAt <= request.time &&
+                         isValidVoucher(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(voucherId) &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidVoucher(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['voucherNumber', 'voucherType', 'date', 'totalAmount', 'narration', 'entriesJson', 'paymentMode', 'upiId', 'upiTransactionRef', 'familyMember', 'attachmentUri', 'isSplit', 'splitDetails', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(voucherId);
+      }
+
+      // 3. Budgets
+      match /budgets/{budgetId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(budgetId) &&
+                         incoming().keys().hasAll(['ledgerId', 'ledgerName', 'monthlyLimit', 'month', 'createdAt']) &&
+                         incoming().keys().hasOnly(['ledgerId', 'ledgerName', 'monthlyLimit', 'month', 'createdAt', 'updatedAt']) &&
+                         incoming().createdAt is timestamp &&
+                         incoming().createdAt <= request.time &&
+                         isValidBudget(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(budgetId) &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidBudget(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['ledgerId', 'ledgerName', 'monthlyLimit', 'month', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(budgetId);
+      }
+
+      // 4. Recurring Vouchers
+      match /recurring/{recurringId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(recurringId) &&
+                         incoming().keys().hasAll(['title', 'voucherType', 'amount', 'debitLedgerId', 'debitLedgerName', 'creditLedgerId', 'creditLedgerName', 'frequency', 'dayOfMonth', 'isActive', 'createdAt']) &&
+                         incoming().keys().hasOnly(['title', 'voucherType', 'amount', 'debitLedgerId', 'debitLedgerName', 'creditLedgerId', 'creditLedgerName', 'frequency', 'dayOfMonth', 'isActive', 'narration', 'createdAt', 'updatedAt']) &&
+                         incoming().createdAt is timestamp &&
+                         incoming().createdAt <= request.time &&
+                         isValidRecurringVoucher(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(recurringId) &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidRecurringVoucher(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'voucherType', 'amount', 'debitLedgerId', 'debitLedgerName', 'creditLedgerId', 'creditLedgerName', 'frequency', 'dayOfMonth', 'isActive', 'narration', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(recurringId);
+      }
+
+      // 5. Family Members
+      match /family_members/{memberId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(memberId) &&
+                         incoming().keys().hasAll(['name', 'role', 'colorHex', 'createdAt']) &&
+                         incoming().keys().hasOnly(['name', 'role', 'colorHex', 'email', 'createdAt', 'updatedAt']) &&
+                         incoming().createdAt is timestamp &&
+                         incoming().createdAt <= request.time &&
+                         isValidFamilyMember(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(memberId) &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidFamilyMember(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['name', 'role', 'colorHex', 'email', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(memberId);
+      }
+    }
+  }
+}

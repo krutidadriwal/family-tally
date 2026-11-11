@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-only overlay. Permits cleartext traffic so debug builds can reach the
+  local Firebase Emulator Suite (Auth + Firestore) over the Android emulator's
+  host loopback (10.0.2.2). Release builds are unaffected.
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application
+        android:usesCleartextTraffic="true"
+        tools:ignore="UnusedAttribute" />
+</manifest>

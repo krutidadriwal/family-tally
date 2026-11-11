@@ -1,0 +1,6 @@
+{
+  "name": "Family Tally",
+  "description": "Personal & family double-entry accounting with Gateway of Tally, F4-F7 vouchers, multi-device cloud sync, ledgers, daybook, P&L, and budgets.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

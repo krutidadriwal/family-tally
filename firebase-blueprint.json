@@ -1,0 +1,336 @@
+{
+  "entities": {
+    "group": {
+      "title": "AccountingGroup",
+      "description": "Chart-of-accounts classification group under which ledgers are organised (e.g. Bank Accounts, Investments, Direct Expenses)",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Group name (e.g. Cash-in-Hand, Bank Accounts, Direct Expenses)"
+        },
+        "parentGroup": {
+          "type": "string",
+          "description": "Optional parent group for hierarchy (e.g. Current Assets)"
+        },
+        "isSystemGroup": {
+          "type": "boolean",
+          "description": "System-defined group seeded from defaults; user groups are false"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Asset", "Liability", "Equity", "Income", "Expense"],
+          "description": "Fundamental accounting category the group rolls up into"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp; clients must submit FieldValue.serverTimestamp()"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp; clients must submit FieldValue.serverTimestamp()"
+        }
+      },
+      "required": ["name", "category", "createdAt"]
+    },
+    "ledger": {
+      "title": "Ledger",
+      "description": "An accounting ledger account under a primary group (e.g. Bank, Cash, Expenses, Income, Investments)",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Account name (e.g. HDFC Bank, Husband's Wallet, Grocery Expenses, Salary Income)"
+        },
+        "group": {
+          "type": "string",
+          "description": "Primary group or sub-group"
+        },
+        "subGroup": {
+          "type": "string",
+          "description": "Optional sub-group classification"
+        },
+        "openingBalance": {
+          "type": "number",
+          "description": "Initial balance amount"
+        },
+        "openingBalanceType": {
+          "type": "string",
+          "enum": ["Dr", "Cr"],
+          "description": "Debit or Credit opening balance"
+        },
+        "marketValue": {
+          "type": "number",
+          "description": "Current market value for investments"
+        },
+        "budgetAmount": {
+          "type": "number",
+          "description": "Optional monthly budget limit for variance warning"
+        },
+        "notes": {
+          "type": "string",
+          "description": "Additional notes"
+        },
+        "isSystemLedger": {
+          "type": "boolean",
+          "description": "System protected ledger (e.g. Family Capital)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp; clients must submit FieldValue.serverTimestamp()"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp; clients must submit FieldValue.serverTimestamp()"
+        }
+      },
+      "required": ["name", "group", "openingBalance", "openingBalanceType", "createdAt"]
+    },
+    "voucher": {
+      "title": "Voucher",
+      "description": "Double-entry accounting transaction voucher (F4 Contra, F5 Payment, F6 Receipt, F7 Journal)",
+      "type": "object",
+      "properties": {
+        "voucherNumber": {
+          "type": "string",
+          "description": "Sequential or formatted voucher identifier"
+        },
+        "voucherType": {
+          "type": "string",
+          "enum": ["F4", "F5", "F6", "F7"],
+          "description": "F4 (Contra), F5 (Payment), F6 (Receipt), F7 (Journal)"
+        },
+        "date": {
+          "type": "string",
+          "description": "Transaction date string YYYY-MM-DD"
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "Total voucher transaction amount"
+        },
+        "narration": {
+          "type": "string",
+          "description": "Narration / description for the voucher"
+        },
+        "entriesJson": {
+          "type": "string",
+          "description": "JSON serialized list of Dr and Cr line items"
+        },
+        "paymentMode": {
+          "type": "string",
+          "description": "Payment mode e.g. UPI, CASH, BANK, CARD"
+        },
+        "upiId": {
+          "type": "string",
+          "description": "Optional UPI VPA paid to"
+        },
+        "upiTransactionRef": {
+          "type": "string",
+          "description": "Optional UPI reference or note"
+        },
+        "familyMember": {
+          "type": "string",
+          "description": "Family member who spent or received"
+        },
+        "attachmentUri": {
+          "type": "string",
+          "description": "Optional local or cloud receipt image attachment URI"
+        },
+        "isSplit": {
+          "type": "boolean",
+          "description": "Whether this transaction was split among family members"
+        },
+        "splitDetails": {
+          "type": "string",
+          "description": "Details of the expense split"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp; clients must submit FieldValue.serverTimestamp()"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp; clients must submit FieldValue.serverTimestamp()"
+        }
+      },
+      "required": ["voucherNumber", "voucherType", "date", "totalAmount", "narration", "entriesJson", "createdAt"]
+    },
+    "budget": {
+      "title": "Budget",
+      "description": "Monthly budget limit for a specific ledger category",
+      "type": "object",
+      "properties": {
+        "ledgerId": {
+          "type": "string",
+          "description": "Referenced ledger ID"
+        },
+        "ledgerName": {
+          "type": "string",
+          "description": "Referenced ledger name"
+        },
+        "monthlyLimit": {
+          "type": "number",
+          "description": "Allocated spending limit"
+        },
+        "month": {
+          "type": "string",
+          "description": "Year-Month format YYYY-MM"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp; clients must submit FieldValue.serverTimestamp()"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp; clients must submit FieldValue.serverTimestamp()"
+        }
+      },
+      "required": ["ledgerId", "ledgerName", "monthlyLimit", "month", "createdAt"]
+    },
+    "recurring_voucher": {
+      "title": "RecurringVoucher",
+      "description": "Scheduled or repeating recurring voucher entry template",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Description of the recurring transaction (e.g. Monthly Rent, SIP Investment, Netflix)"
+        },
+        "voucherType": {
+          "type": "string",
+          "enum": ["F4", "F5", "F6", "F7"],
+          "description": "Voucher type"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount to pass"
+        },
+        "debitLedgerId": {
+          "type": "string",
+          "description": "Debit ledger ID"
+        },
+        "debitLedgerName": {
+          "type": "string",
+          "description": "Debit ledger name"
+        },
+        "creditLedgerId": {
+          "type": "string",
+          "description": "Credit ledger ID"
+        },
+        "creditLedgerName": {
+          "type": "string",
+          "description": "Credit ledger name"
+        },
+        "frequency": {
+          "type": "string",
+          "enum": ["MONTHLY", "WEEKLY"],
+          "description": "Recurrence frequency"
+        },
+        "dayOfMonth": {
+          "type": "number",
+          "description": "Day of month to trigger"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Active status toggle"
+        },
+        "narration": {
+          "type": "string",
+          "description": "Default narration"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp; clients must submit FieldValue.serverTimestamp()"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp; clients must submit FieldValue.serverTimestamp()"
+        }
+      },
+      "required": ["title", "voucherType", "amount", "debitLedgerId", "debitLedgerName", "creditLedgerId", "creditLedgerName", "frequency", "dayOfMonth", "isActive", "createdAt"]
+    },
+    "family_member": {
+      "title": "FamilyMember",
+      "description": "Registered family member profile for role-based permissions and tagging",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Member display name (e.g. Papa, Mummy, Self, Kid)"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["Admin", "Member"],
+          "description": "Role: Admin can edit masters & view all reports, Member can enter expenses"
+        },
+        "email": {
+          "type": "string",
+          "description": "Optional member email"
+        },
+        "colorHex": {
+          "type": "string",
+          "description": "Badge color hex"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp; clients must submit FieldValue.serverTimestamp()"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp; clients must submit FieldValue.serverTimestamp()"
+        }
+      },
+      "required": ["name", "role", "colorHex", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/groups/{groupId}": {
+      "schema": {
+        "$ref": "#/entities/group"
+      },
+      "description": "Accounting classification groups scoped per user"
+    },
+    "/users/{userId}/ledgers/{ledgerId}": {
+      "schema": {
+        "$ref": "#/entities/ledger"
+      },
+      "description": "Accounting ledger accounts scoped per user"
+    },
+    "/users/{userId}/vouchers/{voucherId}": {
+      "schema": {
+        "$ref": "#/entities/voucher"
+      },
+      "description": "Transaction vouchers (Contra, Payment, Receipt, Journal) scoped per user"
+    },
+    "/users/{userId}/budgets/{budgetId}": {
+      "schema": {
+        "$ref": "#/entities/budget"
+      },
+      "description": "Monthly spending budgets and variance limits"
+    },
+    "/users/{userId}/recurring/{recurringId}": {
+      "schema": {
+        "$ref": "#/entities/recurring_voucher"
+      },
+      "description": "Scheduled recurring voucher templates"
+    },
+    "/users/{userId}/family_members/{memberId}": {
+      "schema": {
+        "$ref": "#/entities/family_member"
+      },
+      "description": "Family members for role tracking and expense splitting"
+    }
+  }
+}
